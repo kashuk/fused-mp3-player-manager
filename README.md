@@ -7,3 +7,5 @@ is on the player and lets you delete tracks.
 Paste a YouTube link, press Add, then confirm. The player folder defaults to
 `/Volumes/Untitled/music`; use Change in the list footer to point at another
 folder. The choice is saved on this machine.
+
+Tags: music, mp3, cat, youtube

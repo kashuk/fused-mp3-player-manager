@@ -22,9 +22,21 @@ JOBS = os.path.join(APP, ".fused", "cache", "jobs")
 MP3S = os.path.join(APP, ".fused", "cache", "mp3")
 ART = os.path.join(APP, ".fused", "cache", "art")
 ART_VERSION = "v1"
-DEFAULT_ROOT = "/Volumes/Untitled/music"
 CACHE_VERSION = "v1"
 SETTINGS = os.path.join(APP, ".fused", "data", "settings.json")
+
+
+def _default_root() -> str:
+    """First mounted volume with a top-level "music" folder (the player)."""
+    mounts = os.path.join(os.sep + "Volumes")
+    try:
+        for vol in sorted(os.listdir(mounts)):
+            cand = os.path.join(mounts, vol, "music")
+            if os.path.isdir(cand):
+                return cand
+    except OSError:
+        pass
+    return ""
 
 
 def _saved_root() -> str:
@@ -191,7 +203,7 @@ def main(action: str = "list", url: str = "", name: str = "", root: str = "") ->
         _save_root((url or "").strip().rstrip("/"))
         action = "list"
         root = ""
-    root = (root or _saved_root() or DEFAULT_ROOT).rstrip("/") or DEFAULT_ROOT
+    root = (root or _saved_root() or _default_root()).rstrip("/")
     url = (url or "").strip()
 
     if action == "list":

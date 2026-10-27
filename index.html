@@ -366,7 +366,7 @@ el.rootReset.addEventListener("click", () => saveRoot(""));
 el.rootForm.addEventListener("submit", ev => { ev.preventDefault(); saveRoot(el.rootInput.value); });
 
 function renderList(r) {
-  el.rootLabel.textContent = r.root;
+  el.rootLabel.textContent = r.root || "No player found";
   el.rootInput.value = r.root;
   const n = r.tracks.length;
   el.pill.textContent = r.connected ? "Your player" : "Player not connected";

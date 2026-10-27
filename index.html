@@ -132,6 +132,8 @@
                border-top: 1px solid var(--line); background: var(--surface-2); font-size: 12.5px; color: var(--ink-soft); }
   .list-foot code { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 11.5px; color: var(--ink-faint); }
   .list-foot .link { font-size: 13px; }
+  .list-foot .root-group { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; }
+  .list-foot .root-group code { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .hidden { display: none !important; }
   .foot { margin: 26px 4px 0; color: var(--ink-faint); font-size: 12.5px; line-height: 1.55; }
 
@@ -234,14 +236,16 @@
       <ul id="tracks" class="tracks"></ul>
       <div id="empty" class="empty hidden"></div>
       <div class="list-foot">
+        <div class="root-group">
         <code id="rootLabel"></code>
-        <form id="rootForm" class="hidden" style="flex:1;display:flex;gap:8px;align-items:center">
+        <form id="rootForm" class="hidden" style="flex:1;min-width:0;display:flex;gap:10px;align-items:center">
           <input id="rootInput" type="text" spellcheck="false" style="flex:1;min-width:0;font:11.5px ui-monospace,Menlo,Consolas,monospace;padding:4px 8px" />
           <button type="submit" class="link">Save</button>
           <button id="rootReset" type="button" class="link">Default</button>
           <button id="rootCancel" type="button" class="link">Cancel</button>
         </form>
         <button id="rootEdit" type="button" class="link">Change</button>
+        </div>
         <button id="refresh" type="button" class="link">Refresh</button>
       </div>
     </section>

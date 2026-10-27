@@ -135,6 +135,14 @@
   .list-foot .link { font-size: 13px; }
   .list-foot .root-group { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; }
   .list-foot .root-group code { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .list-foot form { flex: 1; min-width: 0; display: flex; gap: 12px; align-items: center; }
+  .list-foot input[type="text"] {
+    -webkit-appearance: none; appearance: none; flex: 1; min-width: 0; height: 32px; padding: 0 10px;
+    border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--ink);
+    font: 12px ui-monospace, Menlo, Consolas, monospace; outline: none;
+  }
+  .list-foot input[type="text"]:focus { border-color: var(--rose); box-shadow: 0 0 0 3px var(--glow); }
+  .list-foot input[type="text"]::selection { background: var(--rose-light); color: var(--ink); }
   .hidden { display: none !important; }
   .foot { margin: 26px 4px 0; color: var(--ink-faint); font-size: 12.5px; line-height: 1.55; }
 
@@ -239,8 +247,8 @@
       <div class="list-foot">
         <div class="root-group">
         <code id="rootLabel"></code>
-        <form id="rootForm" class="hidden" style="flex:1;min-width:0;display:flex;gap:10px;align-items:center">
-          <input id="rootInput" type="text" spellcheck="false" style="flex:1;min-width:0;font:11.5px ui-monospace,Menlo,Consolas,monospace;padding:4px 8px" />
+        <form id="rootForm" class="hidden">
+          <input id="rootInput" type="text" spellcheck="false" aria-label="Player folder" />
           <button type="submit" class="link">Save</button>
           <button id="rootReset" type="button" class="link">Default</button>
           <button id="rootCancel" type="button" class="link">Cancel</button>

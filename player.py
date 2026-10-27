@@ -6,6 +6,7 @@ Actions:
   info   → YouTube metadata for a URL (title, duration, thumbnail, job_id)
   start  → spawn worker.py: download → MP3 → copy onto the player
   cancel → drop a cancel flag the worker honours
+  set_root → save the player folder (url = path; empty resets to default)
 """
 import hashlib
 import json
@@ -23,6 +24,24 @@ ART = os.path.join(APP, ".fused", "cache", "art")
 ART_VERSION = "v1"
 DEFAULT_ROOT = "/Volumes/Untitled/music"
 CACHE_VERSION = "v1"
+SETTINGS = os.path.join(APP, ".fused", "data", "settings.json")
+
+
+def _saved_root() -> str:
+    try:
+        with open(SETTINGS) as f:
+            return str(json.load(f).get("root") or "")
+    except (OSError, ValueError):
+        return ""
+
+
+def _save_root(root: str) -> None:
+    os.makedirs(os.path.dirname(SETTINGS), exist_ok=True)
+    if root:
+        with open(SETTINGS, "w") as f:
+            json.dump({"root": root}, f)
+    elif os.path.exists(SETTINGS):
+        os.remove(SETTINGS)
 
 
 def job_id_for(video_id: str) -> str:
@@ -166,8 +185,13 @@ def _on_device(root: str, vid: str) -> str | None:
     return None
 
 
-def main(action: str = "list", url: str = "", name: str = "", root: str = DEFAULT_ROOT) -> dict:
-    root = (root or DEFAULT_ROOT).rstrip("/") or DEFAULT_ROOT
+def main(action: str = "list", url: str = "", name: str = "", root: str = "") -> dict:
+    if action == "set_root":
+        # empty value resets to the default
+        _save_root((url or "").strip().rstrip("/"))
+        action = "list"
+        root = ""
+    root = (root or _saved_root() or DEFAULT_ROOT).rstrip("/") or DEFAULT_ROOT
     url = (url or "").strip()
 
     if action == "list":

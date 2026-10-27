@@ -233,7 +233,14 @@
       <ul id="tracks" class="tracks"></ul>
       <div id="empty" class="empty hidden"></div>
       <div class="list-foot">
-        <code id="rootLabel">/Volumes/Untitled/music</code>
+        <code id="rootLabel"></code>
+        <form id="rootForm" class="hidden" style="flex:1;display:flex;gap:8px;align-items:center">
+          <input id="rootInput" type="text" spellcheck="false" style="flex:1;min-width:0;font:11.5px ui-monospace,Menlo,Consolas,monospace;padding:4px 8px" />
+          <button type="submit" class="link">Save</button>
+          <button id="rootReset" type="button" class="link">Default</button>
+          <button id="rootCancel" type="button" class="link">Cancel</button>
+        </form>
+        <button id="rootEdit" type="button" class="link">Change</button>
         <button id="refresh" type="button" class="link">Refresh</button>
       </div>
     </section>
@@ -265,6 +272,8 @@ const el = {
   prog: $("prog"), status: $("status"), pill: $("pill"), refresh: $("refresh"),
   usageTxt: $("usageTxt"), devFill: $("devFill"),
   statSongs: $("statSongs"), statUsed: $("statUsed"), statFree: $("statFree"),
+  rootLabel: $("rootLabel"), rootForm: $("rootForm"), rootInput: $("rootInput"),
+  rootEdit: $("rootEdit"), rootReset: $("rootReset"), rootCancel: $("rootCancel"),
   listStatus: $("listStatus"), tracks: $("tracks"), empty: $("empty"),
 };
 let info = null, polling = null, heartbeat = null, job = null, cancelSent = false;
@@ -320,7 +329,31 @@ async function loadList() {
   }
 }
 
+function showRootEditor(on) {
+  el.rootForm.classList.toggle("hidden", !on);
+  el.rootForm.style.display = on ? "flex" : "none";
+  el.rootLabel.classList.toggle("hidden", on);
+  el.rootEdit.classList.toggle("hidden", on);
+  if (on) { el.rootInput.focus(); el.rootInput.select(); }
+}
+async function saveRoot(value) {
+  try {
+    const r = await fused.runPython(PY, { action: "set_root", url: value }, { key: "list" });
+    renderList(r);
+    setStatus(el.listStatus, "");
+    showRootEditor(false);
+  } catch (e) {
+    setStatus(el.listStatus, e.message || String(e), "err");
+  }
+}
+el.rootEdit.addEventListener("click", () => showRootEditor(true));
+el.rootCancel.addEventListener("click", () => showRootEditor(false));
+el.rootReset.addEventListener("click", () => saveRoot(""));
+el.rootForm.addEventListener("submit", ev => { ev.preventDefault(); saveRoot(el.rootInput.value); });
+
 function renderList(r) {
+  el.rootLabel.textContent = r.root;
+  el.rootInput.value = r.root;
   const n = r.tracks.length;
   el.pill.textContent = r.connected ? "Your player" : "Player not connected";
   el.statSongs.textContent = r.connected ? String(n) : "–";

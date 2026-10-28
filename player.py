@@ -237,6 +237,8 @@ def main(action: str = "list", url: str = "", name: str = "", root: str = "") ->
             if not entries:
                 raise ValueError("Playlist has no entries.")
             info = entries[0]
+        if info.get("is_live") or info.get("live_status") in ("is_live", "is_upcoming"):
+            raise ValueError("That is a live stream, not a video — it has no end to download. Pick a regular video.")
         vid = info.get("id") or hashlib.sha1(url.encode()).hexdigest()[:11]
         jid = job_id_for(vid)
         fname = f"{safe_name(info.get('title') or vid)} [{vid}].mp3"
@@ -257,8 +259,8 @@ def main(action: str = "list", url: str = "", name: str = "", root: str = "") ->
         }
 
     if action == "start":
-        if not _connected(root):
-            raise ValueError("Player is not connected — plug it in first.")
+        # Works without the player: the MP3 lands in cache (playable in the page) and is
+        # copied onto the device only when it is connected.
         info = main("info", url, root=root)
         jid = info["job_id"]
         jdir = os.path.join(JOBS, jid)
@@ -286,7 +288,7 @@ def main(action: str = "list", url: str = "", name: str = "", root: str = "") ->
             [sys.executable, os.path.join(APP, "worker.py"),
              info["webpage_url"], jid, info["title"] or info["id"],
              os.path.join(APP, info["mp3_rel"]),
-             os.path.join(root, info["filename"])],
+             os.path.join(root, info["filename"]) if info["connected"] else ""],
             stdout=log, stderr=log, stdin=subprocess.DEVNULL,
             cwd=APP, start_new_session=True, close_fds=True,
         )

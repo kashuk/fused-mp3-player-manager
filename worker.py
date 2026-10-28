@@ -116,14 +116,19 @@ def main():
             raise RuntimeError("yt-dlp finished but MP3 not found at expected path.")
     check_cancel()
     size = os.path.getsize(out_mp3)
+    rel = os.path.relpath(out_mp3, APP)
+    if not dest:
+        # no player connected: keep the MP3 in cache so it can be played here and copied later
+        write_status("done", size, size, "Ready to play", mp3_rel=rel, size=size, copied=False)
+        return
     write_status("running", 0, size, "Copying to player…", phase="copy")
     if not os.path.isdir(os.path.dirname(dest)):
         raise RuntimeError("Player is not connected — MP3 kept in cache, plug in and retry.")
     tmp = dest + ".part"
     shutil.copyfile(out_mp3, tmp)
     os.replace(tmp, dest)
-    write_status("done", size, size, "On player", mp3_rel=os.path.relpath(out_mp3, APP),
-                 size=size, filename=os.path.basename(dest))
+    write_status("done", size, size, "On player", mp3_rel=rel,
+                 size=size, filename=os.path.basename(dest), copied=True)
 
 
 if __name__ == "__main__":

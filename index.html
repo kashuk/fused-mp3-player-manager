@@ -483,8 +483,8 @@ async function doFetch() {
     if (i.on_device) {
       setStatus(el.status, "Already on the player.", "ok");
       el.start.classList.remove("hidden");
-    } else if (!i.connected) {
-      setStatus(el.status, "Plug in the player, then press Add again.", "err");
+    } else if (i.cached && !i.connected) {
+      setStatus(el.status, "Ready to play. Plug in the player, then press Add again to copy it over.");
       el.start.classList.remove("hidden");
     } else {
       doStart();
@@ -544,9 +544,15 @@ async function poll() {
   el.prog.classList.add("hidden"); el.cancel.classList.add("hidden");
   el.start.disabled = false;
   if (st.state === "done") {
-    setStatus(el.status, "Added to your player", "ok");
-    showPlayer(info.mp3_rel);
-    try { job.finish("On player"); } catch (e) {}
+    showPlayer(st.mp3_rel || info.mp3_rel);
+    if (st.copied === false) {
+      setStatus(el.status, "Ready to play. Plug in the player, then press Add again to copy it over.");
+      el.start.classList.remove("hidden");
+      try { job.finish("Ready to play"); } catch (e) {}
+    } else {
+      setStatus(el.status, "Added to your player", "ok");
+      try { job.finish("On player"); } catch (e) {}
+    }
     loadList();
   } else if (st.state === "cancelled") {
     el.start.classList.remove("hidden");

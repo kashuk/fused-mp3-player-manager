@@ -16,7 +16,31 @@
     --ink: #4b2338; --ink-soft: #9a6b84; --ink-faint: #c4a3b4;
     --rose: #f06ba3; --rose-deep: #d9457f; --rose-light: #ffc2d9; --rose-pale: #ffe3ee;
     --line: #f7d6e4; --ok: #2f8f5b; --err: #d0325c;
-    --glow: rgba(240, 107, 163, .22);
+    --glow: rgba(240, 107, 163, .22); --on-accent: #ffffff;
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #1b0f16; --bg-deep: #3a1a2c; --surface: #261620; --surface-2: #2f1b28;
+    --ink: #f6e3ec; --ink-soft: #c79cb1; --ink-faint: #7f5a6c;
+    --rose: #f06ba3; --rose-deep: #ff8fbf; --rose-light: #c0497e; --rose-pale: #3d2030;
+    --line: #432836; --ok: #5fcf8f; --err: #ff6b8f;
+    --glow: rgba(240, 107, 163, .35); --on-accent: #ffffff;
+  }
+  :root[data-theme="blue"] {
+    color-scheme: light;
+    --bg: #edf3ff; --bg-deep: #d6e3ff; --surface: #ffffff; --surface-2: #f3f7ff;
+    --ink: #1f2b4b; --ink-soft: #66769c; --ink-faint: #a4b1cf;
+    --rose: #4f7cf0; --rose-deep: #2f5bd0; --rose-light: #bfd2ff; --rose-pale: #e2ebff;
+    --line: #d5e0f7; --ok: #2f8f5b; --err: #d0325c;
+    --glow: rgba(79, 124, 240, .22); --on-accent: #ffffff;
+  }
+  :root[data-theme="blue-dark"] {
+    color-scheme: dark;
+    --bg: #0d1322; --bg-deep: #182a52; --surface: #151d31; --surface-2: #1b2540;
+    --ink: #e3eaff; --ink-soft: #9aabd6; --ink-faint: #5b6a92;
+    --rose: #5b86f5; --rose-deep: #8eaeff; --rose-light: #3a5fc4; --rose-pale: #1f2c4e;
+    --line: #273655; --ok: #5fcf8f; --err: #ff6b8f;
+    --glow: rgba(91, 134, 245, .35); --on-accent: #ffffff;
   }
   *, *::before, *::after { box-sizing: border-box; }
   html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
@@ -43,6 +67,13 @@
   .bar .mark { flex: none; width: 28px; height: 28px; }
   .bar .name { font-weight: 600; font-size: 14px; }
   .bar .who { margin-left: 6px; color: var(--rose-deep); font-size: 14px; font-style: italic; }
+  .bar .theme {
+    margin-left: auto; -webkit-appearance: none; -moz-appearance: none; appearance: none;
+    padding: 6px 28px 6px 12px; border-radius: 999px; border: 1px solid var(--line);
+    background: var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23888' stroke-width='1.5'/%3E%3C/svg%3E") no-repeat right 11px center;
+    color: var(--ink); font-size: 13px; cursor: pointer;
+  }
+  .bar .theme:focus-visible { outline: 2px solid var(--rose); outline-offset: 2px; }
 
   /* hero */
   .hero {
@@ -69,7 +100,7 @@
   .add input[type="url"]:focus { border-color: var(--rose); box-shadow: 0 0 0 4px var(--glow); }
   .add button[type="submit"] {
     position: absolute; right: 6px; top: 6px; bottom: 6px; padding: 0 18px; border: 0; border-radius: 10px;
-    background: var(--rose); color: #fff; font-weight: 600; font-size: 14px; cursor: pointer;
+    background: var(--rose); color: var(--on-accent); font-weight: 600; font-size: 14px; cursor: pointer;
   }
   .add button[type="submit"]:disabled { opacity: .55; cursor: default; }
 
@@ -113,7 +144,7 @@
   .track + .track { margin-top: 2px; }
   .art {
     width: 42px; height: 42px; border-radius: 12px; flex: none; display: flex; align-items: center; justify-content: center;
-    background: linear-gradient(150deg, var(--rose-light), var(--rose)); color: #fff;
+    background: linear-gradient(150deg, var(--rose-light), var(--rose)); color: var(--on-accent);
     box-shadow: inset 0 1px 0 rgba(255,255,255,.5);
   }
   .art svg { width: 20px; height: 20px; }
@@ -126,7 +157,7 @@
     color: var(--ink-faint); font-size: 13px; cursor: pointer;
     -webkit-transition: color .15s, background-color .15s, border-color .15s; transition: color .15s, background-color .15s, border-color .15s;
   }
-  .track .del.arm { color: #fff; background: var(--err); border-color: var(--err); }
+  .track .del.arm { color: var(--on-accent); background: var(--err); border-color: var(--err); }
   .track .del:disabled { opacity: .5; cursor: default; }
   .empty { padding: 36px 24px 28px; text-align: center; color: var(--ink-soft); }
   .empty img { width: 120px; margin: 0 auto 6px; }
@@ -199,6 +230,12 @@
       </svg>
     <span class="name">MP3 Player</span>
     <!-- <span class="who">powered only for Nandini</span> -->
+    <select id="theme" class="theme" aria-label="Theme">
+      <option value="light">Pink · Light</option>
+      <option value="dark">Pink · Dark</option>
+      <option value="blue">Blue · Light</option>
+      <option value="blue-dark">Blue · Dark</option>
+    </select>
   </div>
 
   <div class="ledge"><img class="cat-hang friend" data-asset="assets/cat-hang.png" alt="" /></div>
@@ -583,9 +620,16 @@ el.cancel.addEventListener("click", doCancel);
 el.refresh.addEventListener("click", loadList);
 
 const DEFAULT_URL = "https://www.youtube.com/watch?v=OAUtiqYDhEc";
+const THEMES = ["light", "dark", "blue", "blue-dark"];
+const themeSel = document.getElementById("theme");
+themeSel.addEventListener("change", () => fused.params.set("theme", themeSel.value));
 function draw() {
   const url = fused.params.get("url") || DEFAULT_URL;
   if (url !== el.url.value) el.url.value = url;
+  const t = fused.params.get("theme");
+  const theme = THEMES.includes(t) ? t : "light";
+  document.documentElement.setAttribute("data-theme", theme);
+  if (themeSel.value !== theme) themeSel.value = theme;
 }
 fused.params.onChange(draw);
 draw();

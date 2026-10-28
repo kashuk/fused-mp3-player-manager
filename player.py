@@ -18,6 +18,7 @@ import sys
 import time
 
 APP = os.path.dirname(os.path.abspath(__file__))
+LIVE_CLIP_SECONDS = 30 * 60  # a live stream has no end: record this much of it
 JOBS = os.path.join(APP, ".fused", "cache", "jobs")
 MP3S = os.path.join(APP, ".fused", "cache", "mp3")
 ART = os.path.join(APP, ".fused", "cache", "art")
@@ -237,8 +238,9 @@ def main(action: str = "list", url: str = "", name: str = "", root: str = "") ->
             if not entries:
                 raise ValueError("Playlist has no entries.")
             info = entries[0]
-        if info.get("is_live") or info.get("live_status") in ("is_live", "is_upcoming"):
-            raise ValueError("That is a live stream, not a video — it has no end to download. Pick a regular video.")
+        if info.get("live_status") == "is_upcoming":
+            raise ValueError("That stream has not started yet. Try again once it is live.")
+        is_live = bool(info.get("is_live") or info.get("live_status") == "is_live")
         vid = info.get("id") or hashlib.sha1(url.encode()).hexdigest()[:11]
         jid = job_id_for(vid)
         fname = f"{safe_name(info.get('title') or vid)} [{vid}].mp3"
@@ -248,7 +250,8 @@ def main(action: str = "list", url: str = "", name: str = "", root: str = "") ->
             "job_id": jid,
             "title": info.get("title"),
             "uploader": info.get("uploader") or info.get("channel"),
-            "duration": info.get("duration"),
+            "duration": LIVE_CLIP_SECONDS if is_live else info.get("duration"),
+            "is_live": is_live,
             "thumbnail": info.get("thumbnail"),
             "webpage_url": info.get("webpage_url") or url,
             "filename": fname,
@@ -288,7 +291,8 @@ def main(action: str = "list", url: str = "", name: str = "", root: str = "") ->
             [sys.executable, os.path.join(APP, "worker.py"),
              info["webpage_url"], jid, info["title"] or info["id"],
              os.path.join(APP, info["mp3_rel"]),
-             os.path.join(root, info["filename"]) if info["connected"] else ""],
+             os.path.join(root, info["filename"]) if info["connected"] else "",
+             "live" if info.get("is_live") else ""],
             stdout=log, stderr=log, stdin=subprocess.DEVNULL,
             cwd=APP, start_new_session=True, close_fds=True,
         )

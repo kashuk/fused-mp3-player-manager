@@ -1,6 +1,7 @@
 """Detached downloader: bestaudio → MP3 (VBR best) via bundled ffmpeg, then copy onto the player.
 
-argv: url job_id title out_mp3 dest
+argv: url job_id title out_mp3 dest [live]
+With "live" the stream is recorded for LIVE_CLIP_SECONDS via ffmpeg instead of downloaded.
 Writes .fused/cache/jobs/<job_id>/status.json atomically per tick and mirrors
 progress to the shell's download manager over HTTP (best effort).
 """
@@ -13,6 +14,8 @@ import urllib.request
 
 APP = os.path.dirname(os.path.abspath(__file__))
 url, job_id, title, out_mp3, dest = sys.argv[1:6]
+is_live = len(sys.argv) > 6 and sys.argv[6] == "live"
+LIVE_CLIP_SECONDS = int(os.environ.get("MP3_LIVE_CLIP_SECONDS") or 30 * 60)
 jdir = os.path.join(APP, ".fused", "cache", "jobs", job_id)
 status_path = os.path.join(jdir, "status.json")
 cancel_path = os.path.join(jdir, "cancel")
@@ -81,6 +84,78 @@ def on_pp(d):
         write_status("running", 0, None, "Converting to MP3…", phase="convert")
 
 
+def _clock(sec):
+    sec = int(sec)
+    return f"{sec // 60}:{sec % 60:02d}"
+
+
+def record_live(ffmpeg):
+    """Record LIVE_CLIP_SECONDS of a live stream straight into out_mp3."""
+    import subprocess
+    import yt_dlp
+
+    write_status("running", 0, None, "Resolving stream…", phase="resolve")
+    with yt_dlp.YoutubeDL({"quiet": True, "no_warnings": True, "noplaylist": True,
+                           "format": "bestaudio/best"}) as y:
+        info = y.extract_info(url, download=False)
+        cover = None
+        if info.get("thumbnail"):
+            # yt-dlp carries its own CA bundle; the venv's urllib may not.
+            try:
+                cover = os.path.splitext(out_mp3)[0] + ".jpg"
+                with open(cover, "wb") as f:
+                    f.write(y.urlopen(info["thumbnail"]).read())
+            except Exception:
+                cover = None
+    stream = info.get("url")
+    if not stream:
+        raise RuntimeError("Could not find an audio stream for this live video.")
+    headers = "".join(f"{k}: {v}\r\n" for k, v in (info.get("http_headers") or {}).items())
+    check_cancel()
+    tmp = out_mp3 + ".part.mp3"
+    cmd = [ffmpeg, "-y", "-hide_banner", "-loglevel", "error", "-nostdin"]
+    if headers:
+        cmd += ["-headers", headers]
+    cmd += ["-i", stream]
+    if cover:
+        cmd += ["-i", cover]
+    cmd += ["-t", str(LIVE_CLIP_SECONDS), "-map", "0:a:0", "-codec:a", "libmp3lame", "-q:a", "0",
+            "-metadata", f"title={title}", "-metadata", "artist=" + (info.get("uploader") or info.get("channel") or ""),
+            "-id3v2_version", "3"]
+    if cover:
+        cmd += ["-map", "1:v:0", "-codec:v", "mjpeg", "-disposition:v", "attached_pic",
+                "-metadata:s:v", "title=Album cover"]
+    cmd += ["-progress", "pipe:1", "-f", "mp3", tmp]
+    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    total = LIVE_CLIP_SECONDS
+    try:
+        for line in proc.stdout:
+            if line.startswith("out_time_us=") or line.startswith("out_time_ms="):
+                try:
+                    done = min(int(line.split("=", 1)[1]) / 1_000_000, total)
+                except ValueError:
+                    continue
+                write_status("running", done, total,
+                             f"Recording {_clock(done)} of {_clock(total)}…", phase="record")
+            try:
+                check_cancel()
+            except Cancelled:
+                proc.kill()
+                proc.wait()
+                raise
+    finally:
+        err = proc.stderr.read() if proc.stderr else ""
+        proc.wait()
+    if proc.returncode != 0 or not os.path.exists(tmp):
+        raise RuntimeError("ffmpeg failed: " + (err.strip().splitlines() or ["unknown error"])[-1])
+    os.replace(tmp, out_mp3)
+    if cover:
+        try:
+            os.remove(cover)
+        except OSError:
+            pass
+
+
 def main():
     import imageio_ffmpeg
     import yt_dlp
@@ -108,7 +183,9 @@ def main():
         "postprocessor_hooks": [on_pp],
         "overwrites": True,
     }
-    if not os.path.exists(out_mp3):
+    if is_live and not os.path.exists(out_mp3):
+        record_live(opts["ffmpeg_location"])
+    elif not os.path.exists(out_mp3):
         write_status("running", 0, None, "Resolving stream…", phase="resolve")
         with yt_dlp.YoutubeDL(opts) as y:
             y.download([url])
@@ -137,7 +214,7 @@ if __name__ == "__main__":
     except Cancelled:
         stem = os.path.splitext(os.path.basename(out_mp3))[0]
         for p in os.listdir(os.path.dirname(out_mp3)):
-            if p.startswith(stem) and (p.endswith(".part") or p.endswith(".ytdl")):
+            if p.startswith(stem) and (p.endswith(".part") or p.endswith(".ytdl") or p.endswith(".part.mp3")):
                 try:
                     os.remove(os.path.join(os.path.dirname(out_mp3), p))
                 except OSError:

@@ -462,7 +462,7 @@ function showInfo(i) {
   el.thumb.classList.toggle("hidden", !i.thumbnail);
   el.ytTitle.textContent = i.title || i.id;
   el.ytTitle.title = i.title || "";
-  el.ytDim.textContent = [i.uploader, fmtDur(i.duration)].filter(Boolean).join(", ");
+  el.ytDim.textContent = [i.uploader, i.is_live ? "Live stream, " + fmtDur(i.duration) + " clip" : fmtDur(i.duration)].filter(Boolean).join(", ");
   el.prog.classList.add("hidden");
   el.cancel.classList.add("hidden");
   el.start.classList.add("hidden");
@@ -537,7 +537,10 @@ async function poll() {
   if (st.state === "running" || st.state === "queued") {
     setStatus(el.status, (st.detail || "Working…") + (st.phase === "download" ? pct : ""));
     el.cancel.classList.remove("hidden"); el.prog.classList.remove("hidden");
-    try { job.update({ done: st.done || 0, total: st.total || undefined, detail: st.detail }); } catch (e) {}
+    try {
+      if (st.phase === "record") job.update({ detail: st.detail });
+      else job.update({ done: st.done || 0, total: st.total || undefined, detail: st.detail });
+    } catch (e) {}
     return;
   }
   stopPolling();

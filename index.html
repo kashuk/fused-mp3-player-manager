@@ -67,13 +67,28 @@
   .bar .mark { flex: none; width: 28px; height: 28px; }
   .bar .name { font-weight: 600; font-size: 14px; }
   .bar .who { margin-left: 6px; color: var(--rose-deep); font-size: 14px; font-style: italic; }
-  .bar .theme {
-    margin-left: auto; -webkit-appearance: none; -moz-appearance: none; appearance: none;
-    padding: 6px 28px 6px 12px; border-radius: 999px; border: 1px solid var(--line);
-    background: var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23888' stroke-width='1.5'/%3E%3C/svg%3E") no-repeat right 11px center;
-    color: var(--ink); font-size: 13px; cursor: pointer;
+  .theme { position: relative; margin-left: auto; }
+  .theme .dot {
+    width: 26px; height: 26px; padding: 0; border-radius: 50%; cursor: pointer;
+    background: var(--rose); border: 2px solid var(--surface);
+    box-shadow: 0 0 0 1px var(--line), 0 6px 14px -6px var(--glow);
   }
-  .bar .theme:focus-visible { outline: 2px solid var(--rose); outline-offset: 2px; }
+  .theme .dot:focus-visible, .theme .pick button:focus-visible { outline: 2px solid var(--rose); outline-offset: 2px; }
+  .theme .pick {
+    position: absolute; top: 34px; right: 0; z-index: 5; display: flex; gap: 8px; padding: 8px;
+    border-radius: 999px; background: var(--surface); border: 1px solid var(--line);
+    box-shadow: 0 16px 32px -20px var(--glow);
+  }
+  .theme .pick.hidden { display: none; }
+  .theme .pick button {
+    width: 24px; height: 24px; padding: 0; border-radius: 50%; cursor: pointer;
+    border: 2px solid var(--surface); box-shadow: 0 0 0 1px var(--line);
+  }
+  .theme .pick button.on { box-shadow: 0 0 0 2px var(--ink); }
+  .theme .pick [data-t="light"] { background: #f06ba3; }
+  .theme .pick [data-t="dark"] { background: linear-gradient(135deg, #f06ba3 50%, #1b0f16 50%); }
+  .theme .pick [data-t="blue"] { background: #4f7cf0; }
+  .theme .pick [data-t="blue-dark"] { background: linear-gradient(135deg, #5b86f5 50%, #0d1322 50%); }
 
   /* hero */
   .hero {
@@ -230,12 +245,15 @@
       </svg>
     <span class="name">MP3 Player</span>
     <!-- <span class="who">powered only for Nandini</span> -->
-    <select id="theme" class="theme" aria-label="Theme">
-      <option value="light">Pink · Light</option>
-      <option value="dark">Pink · Dark</option>
-      <option value="blue">Blue · Light</option>
-      <option value="blue-dark">Blue · Dark</option>
-    </select>
+    <div class="theme">
+      <button id="themeDot" class="dot" type="button" aria-label="Change theme" aria-expanded="false"></button>
+      <div id="themePick" class="pick hidden" role="group" aria-label="Themes">
+        <button type="button" data-t="light" aria-label="Pink light"></button>
+        <button type="button" data-t="dark" aria-label="Pink dark"></button>
+        <button type="button" data-t="blue" aria-label="Blue light"></button>
+        <button type="button" data-t="blue-dark" aria-label="Blue dark"></button>
+      </div>
+    </div>
   </div>
 
   <div class="ledge"><img class="cat-hang friend" data-asset="assets/cat-hang.png" alt="" /></div>
@@ -621,15 +639,23 @@ el.refresh.addEventListener("click", loadList);
 
 const DEFAULT_URL = "https://www.youtube.com/watch?v=OAUtiqYDhEc";
 const THEMES = ["light", "dark", "blue", "blue-dark"];
-const themeSel = document.getElementById("theme");
-themeSel.addEventListener("change", () => fused.params.set("theme", themeSel.value));
+const themeDot = document.getElementById("themeDot");
+const themePick = document.getElementById("themePick");
+function showPick(open) { themePick.classList.toggle("hidden", !open); themeDot.setAttribute("aria-expanded", String(open)); }
+themeDot.addEventListener("click", e => { e.stopPropagation(); showPick(themePick.classList.contains("hidden")); });
+themePick.addEventListener("click", e => {
+  const b = e.target.closest("[data-t]"); if (!b) return;
+  fused.params.set("theme", b.dataset.t); showPick(false);
+});
+document.addEventListener("click", e => { if (!e.target.closest(".theme")) showPick(false); });
+document.addEventListener("keydown", e => { if (e.key === "Escape") showPick(false); });
 function draw() {
   const url = fused.params.get("url") || DEFAULT_URL;
   if (url !== el.url.value) el.url.value = url;
   const t = fused.params.get("theme");
   const theme = THEMES.includes(t) ? t : "light";
   document.documentElement.setAttribute("data-theme", theme);
-  if (themeSel.value !== theme) themeSel.value = theme;
+  themePick.querySelectorAll("[data-t]").forEach(b => b.classList.toggle("on", b.dataset.t === theme));
 }
 fused.params.onChange(draw);
 draw();

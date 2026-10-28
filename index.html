@@ -96,6 +96,8 @@
   .status { margin-top: 6px; font-size: 13px; color: var(--ink-soft); }
   .status.err { color: var(--err); white-space: pre-wrap; word-break: break-word; }
   .status.ok { color: var(--ok); }
+  .player { display: block; width: 100%; height: 36px; margin-top: 10px; border-radius: 18px; }
+  .player.hidden { display: none; }
 
   /* playlist */
   .list-wrap { position: relative; z-index: 1; }
@@ -227,6 +229,7 @@
       <div id="ytDim" class="dim"></div>
       <progress id="prog" class="hidden" max="1"></progress>
       <div id="status" class="status"></div>
+      <audio id="player" class="player hidden" controls preload="metadata"></audio>
       <div class="actions">
         <button id="start" type="button" class="link hidden">Add again</button>
         <button id="cancel" type="button" class="link hidden">Cancel</button>
@@ -282,7 +285,7 @@ const PY = "./player.py";
 const $ = id => document.getElementById(id);
 const el = {
   form: $("form"), url: $("url"), fetch: $("fetch"), yt: $("yt"), thumb: $("thumb"),
-  ytTitle: $("ytTitle"), ytDim: $("ytDim"), start: $("start"), cancel: $("cancel"),
+  ytTitle: $("ytTitle"), ytDim: $("ytDim"), start: $("start"), cancel: $("cancel"), player: $("player"),
   prog: $("prog"), status: $("status"), pill: $("pill"), refresh: $("refresh"),
   usageTxt: $("usageTxt"), devFill: $("devFill"),
   statSongs: $("statSongs"), statUsed: $("statUsed"), statFree: $("statFree"),
@@ -440,14 +443,26 @@ async function onDelete(name, btn) {
 }
 
 /* ---------- add from youtube ---------- */
+function showPlayer(rel) {
+  if (!rel) { hidePlayer(); return; }
+  el.player.src = fused.rawUrl(rel);
+  el.player.classList.remove("hidden");
+}
+function hidePlayer() {
+  el.player.pause();
+  el.player.removeAttribute("src");
+  el.player.classList.add("hidden");
+}
+
 function showInfo(i) {
   info = i;
   el.yt.classList.remove("hidden");
+  showPlayer(i.cached ? i.mp3_rel : null);
   el.thumb.src = i.thumbnail || "";
   el.thumb.classList.toggle("hidden", !i.thumbnail);
   el.ytTitle.textContent = i.title || i.id;
   el.ytTitle.title = i.title || "";
-  el.ytDim.textContent = [i.uploader, fmtDur(i.duration)].filter(Boolean).join(", ");
+  el.ytDim.textContent = [i.uploader, i.is_live ? "Live stream, " + fmtDur(i.duration) + " clip" : fmtDur(i.duration)].filter(Boolean).join(", ");
   el.prog.classList.add("hidden");
   el.cancel.classList.add("hidden");
   el.start.classList.add("hidden");
@@ -460,6 +475,7 @@ async function doFetch() {
   fused.params.set("url", url);
   el.fetch.disabled = true;
   el.yt.classList.add("hidden");
+  hidePlayer();
   setStatus(el.status, "");
   try {
     const i = await fused.runPython(PY, { action: "info", url }, { key: "job" });
@@ -467,14 +483,15 @@ async function doFetch() {
     if (i.on_device) {
       setStatus(el.status, "Already on the player.", "ok");
       el.start.classList.remove("hidden");
-    } else if (!i.connected) {
-      setStatus(el.status, "Plug in the player, then press Add again.", "err");
+    } else if (i.cached && !i.connected) {
+      setStatus(el.status, "Ready to play. Plug in the player, then press Add again to copy it over.");
       el.start.classList.remove("hidden");
     } else {
       doStart();
     }
   } catch (e) {
     el.yt.classList.remove("hidden");
+    hidePlayer();
     el.thumb.classList.add("hidden");
     el.ytTitle.textContent = "Could not read video";
     el.ytDim.textContent = "";
@@ -520,15 +537,25 @@ async function poll() {
   if (st.state === "running" || st.state === "queued") {
     setStatus(el.status, (st.detail || "Working…") + (st.phase === "download" ? pct : ""));
     el.cancel.classList.remove("hidden"); el.prog.classList.remove("hidden");
-    try { job.update({ done: st.done || 0, total: st.total || undefined, detail: st.detail }); } catch (e) {}
+    try {
+      if (st.phase === "record") job.update({ detail: st.detail });
+      else job.update({ done: st.done || 0, total: st.total || undefined, detail: st.detail });
+    } catch (e) {}
     return;
   }
   stopPolling();
   el.prog.classList.add("hidden"); el.cancel.classList.add("hidden");
   el.start.disabled = false;
   if (st.state === "done") {
-    setStatus(el.status, "Added to your player", "ok");
-    try { job.finish("On player"); } catch (e) {}
+    showPlayer(st.mp3_rel || info.mp3_rel);
+    if (st.copied === false) {
+      setStatus(el.status, "Ready to play. Plug in the player, then press Add again to copy it over.");
+      el.start.classList.remove("hidden");
+      try { job.finish("Ready to play"); } catch (e) {}
+    } else {
+      setStatus(el.status, "Added to your player", "ok");
+      try { job.finish("On player"); } catch (e) {}
+    }
     loadList();
   } else if (st.state === "cancelled") {
     el.start.classList.remove("hidden");
